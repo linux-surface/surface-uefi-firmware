@@ -1,0 +1,7 @@
+*.cab
+*.cat
+*.inf
+*.zip
+*.bin
+*.metainfo.xml
+!template.metainfo.xml
