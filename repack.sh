@@ -133,15 +133,16 @@ if [ "$MODE" = "dir" ]; then
 fi
 
 for dir in $OUTPUT/$MODEL/*; do
-	pushd $dir
+	PARENT=$(pwd)
+	cd $dir
 	
 	FIRMWARE=$(basename $dir)
 	VERSION=$(grep -Po 'version: "[^"]+"' *.metainfo.xml | \
 		cut -d'"' -f2)
 	
-	BINFILE=$(ls *.{bin,cap})
-	CATFILE=$(ls *.cat)
-	INFFILE=$(ls *.inf)
+	BINFILE=$(basename $(find . -name '*.bin' -or -name '*.cap'))
+	CATFILE=$(basename $(find . -name '*.cat'))
+	INFFILE=$(basename $(find . -name '*.inf'))
 
 	TMP=$(mktemp -d)
 	cp *.metainfo.xml $TMP/firmware.metainfo.xml
@@ -149,7 +150,7 @@ for dir in $OUTPUT/$MODEL/*; do
 	cp $CATFILE $TMP/firmware.cat
 	cp $INFFILE $TMP/firmware.inf
 		
-	popd
+	cd $PARENT
 
 	sed -e "s|$CATFILE|firmware.cat|g" \
 		-e "s|$BINFILE|firmware.bin|g" \
