@@ -28,12 +28,14 @@ if match $NAME SurfaceGo && match $NAME LTE; then
 	exit
 fi
 
-if match $NAME SurfacePro && match $NAME LTE; then
+# Matching for SurfacePro_ avoids any false positives when checking
+# other Surface Pros with proper naming on their firmware MSIs
+if match $NAME SurfacePro_ && match $NAME LTE; then
 	setmodel $FILE SurfacePro5-LTE
 	exit
 fi
 
-if match $NAME SurfacePro; then
+if match $NAME SurfacePro_; then
 	setmodel $FILE SurfacePro5-WiFi
 	exit
 fi
