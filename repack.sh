@@ -119,10 +119,6 @@ for inf in $(grep -lR 'Firmware_Install,UEFI' $TMP); do
 	sed -i "s|{TIMESTAMP}|$TIMESTAMP|g" $FWDIR/*.metainfo.xml
 
 	UEFIVER=$(grep 'FirmwareVersion' $inf | cut -d',' -f5)
-	MAJOR=$(($(($UEFIVER >> 24)) & 0xff))
-	MINOR=$(($(($UEFIVER >> 16)) & 0xff))
-	REV=$(($UEFIVER & 0xffff))
-	UEFIVER="$MAJOR.$MINOR.$REV"
 	sed -i "s|{UEFIVER}|$UEFIVER|g" $FWDIR/*.metainfo.xml
 done
 
