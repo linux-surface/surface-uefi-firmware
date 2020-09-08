@@ -72,7 +72,7 @@ TMP=$(mktemp -d)
 msiextract -C $TMP $FILE > /dev/null 2>&1
 
 # Convert all .inf files to unix format
-for inf in $(find $TMP -name '*.inf' -or -name 'ReadMe.txt'); do
+for inf in $(find $TMP -iname '*.inf' -or -iname 'ReadMe.txt'); do
 	dos2unix $inf > /dev/null 2>&1
 done
 
@@ -136,9 +136,9 @@ for dir in $OUTPUT/$MODEL/*; do
 	VERSION=$(grep -Po 'version: "[^"]+"' *.metainfo.xml | \
 		cut -d'"' -f2)
 	
-	BINFILE=$(basename $(find . -name '*.bin' -or -name '*.cap'))
-	CATFILE=$(basename $(find . -name '*.cat'))
-	INFFILE=$(basename $(find . -name '*.inf'))
+	BINFILE=$(basename $(find . -iname '*.bin' -or -iname '*.cap'))
+	CATFILE=$(basename $(find . -iname '*.cat'))
+	INFFILE=$(basename $(find . -iname '*.inf'))
 
 	TMP=$(mktemp -d)
 	cp *.metainfo.xml $TMP/firmware.metainfo.xml
