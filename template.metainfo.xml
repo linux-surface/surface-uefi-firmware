@@ -14,7 +14,6 @@
 	</categories>
 	<custom>
 		<value key="LVFS::UpdateProtocol">org.uefi.capsule</value>
-		<value key="LVFS::VersionFormat">hex</value>
 	</custom>
 	<url type="homepage">https://www.microsoft.com</url>
 	<metadata_license>CC0-1.0</metadata_license>
