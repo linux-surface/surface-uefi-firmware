@@ -118,7 +118,7 @@ for inf in $(grep -lR 'Firmware_Install,UEFI' $TMP); do
 	TIMESTAMP=$(date '+%s' --date $TIMESTAMP)
 	sed -i "s|{TIMESTAMP}|$TIMESTAMP|g" $FWDIR/*.metainfo.xml
 
-	UEFIVER=$(grep 'FirmwareVersion' $inf | cut -d',' -f5)
+	UEFIVER=$(grep 'FirmwareVersion' $inf | cut -d',' -f5 | sed 's|\r||')
 	MAJOR=$(($(($UEFIVER >> 24)) & 0xff))
 	MINOR=$(($(($UEFIVER >> 16)) & 0xff))
 	REV=$(($UEFIVER & 0xffff))
@@ -138,7 +138,7 @@ for dir in $OUTPUT/$MODEL/*; do
 	
 	FIRMWARE=$(basename $dir)
 	VERSION=$(grep -Po 'version: "[^"]+"' *.metainfo.xml | \
-		cut -d'"' -f2)
+		cut -d'"' -f2 | sed 's|\r||')
 	
 	BINFILE=$(basename $(find . -iname '*.bin' -or -iname '*.cap'))
 	CATFILE=$(basename $(find . -iname '*.cat'))
