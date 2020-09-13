@@ -36,18 +36,18 @@ multiple versions of Windows. Just use the first one.
 
 https://support.microsoft.com/en-us/help/4023482/surface-download-drivers-and-firmware-for-surface
 
-You will also have to install the `msiextract` and `gcab` programs through
+You will also have to install the `msiextract`, `gcab` and `dos2unix` programs through
 your distributions package manager.
 
 ```bash
 # Debian based
-$ sudo apt install msitools gcab
+$ sudo apt install msitools gcab dos2unix
 
 # Arch based, msitools is in the AUR, use whatever helper you like
-$ yay -S gcab msitools
+$ yay -S gcab msitools dos2unix
 
 # Fedora
-$ sudo dnf install msitools gcab
+$ sudo dnf install msitools gcab dos2unix
 ```
 
 We are going to assume you have a directory tree that looks like this, and
