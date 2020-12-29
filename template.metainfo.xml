@@ -14,6 +14,7 @@
 	</categories>
 	<custom>
 		<value key="LVFS::UpdateProtocol">org.uefi.capsule</value>
+		<value key="LVFS::VersionFormat">{VERSIONFMT}</value>
 	</custom>
 	<url type="homepage">https://www.microsoft.com</url>
 	<metadata_license>CC0-1.0</metadata_license>
@@ -22,6 +23,8 @@
 	<releases>
 		<!-- version: "{MSVER}" -->
 		<release version="{UEFIVER}" timestamp="{TIMESTAMP}">
+		<checksum type="sha1" filename="{FWFILE}" target="content">{FWSHA1}</checksum>
+		<checksum type="sha256" filename="{FWFILE}" target="content">{FWSHA256}</checksum>
 			<description>
 				<p>Please visit the Microsoft homepage to find more information about this update.</p>
 				<p>The computer will be restarted automatically after updating completely. Do NOT turn off your computer or remove the AC adaptor while update is in progress.</p>
