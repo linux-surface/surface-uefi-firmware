@@ -66,6 +66,21 @@ if [ "$OUTPUT" = "" ]; then
 	exit
 fi
 
+if ! command -v "msiextract" > /dev/null; then
+	echo "ERROR: command 'msiextract' not found, please install the corresponding package"
+	exit
+fi
+
+if ! command -v "gcab" > /dev/null; then
+	echo "ERROR: command 'gcab' not found, please install the corresponding package"
+	exit
+fi
+
+if ! command -v "dos2unix" > /dev/null; then
+	echo "ERROR: command 'dos2unix' not found, please install the corresponding package"
+	exit
+fi
+
 # Figure out the model name from the MSI file
 MODEL=$(basename "$FILE" | cut -d'_' -f1)
 
