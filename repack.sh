@@ -189,5 +189,6 @@ if [ "$MODE" = "cab" ]; then
 	exit
 fi
 
+echo " ==> Bundling cab files into zip"
 cd "${OUTPUT}/${MODEL}"
 zip "${MODEL}-$(date '+%Y-%m-%d').zip" ./*.cab
