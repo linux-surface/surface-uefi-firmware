@@ -85,6 +85,13 @@ fi
 MODEL=$(basename "$FILE" | cut -d'_' -f1)
 
 echo " ==> Found Model: $MODEL"
+
+if [ -d "$OUTPUT/$MODEL" ] &&
+		! [ "$(find "$OUTPUT/$MODEL" -maxdepth 0 -empty)" = "$OUTPUT/$MODEL" ]; then
+	echo "ERROR: output directory ($OUTPUT/$MODEL) is not empty"
+	exit
+fi
+
 echo " ==> Unpacking driver package"
 
 # Unpack the MSI file
