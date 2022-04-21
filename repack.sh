@@ -125,16 +125,16 @@ grep -lR 'Firmware_Install,UEFI' "$TMP" | while IFS= read -r inf; do
 	fi
 	sed -i "s|{CATEGORY}|$CATEGORY|g" "$FWDIR"/*.metainfo.xml
 
-	DEVICE=$(grep 'Firmware_Install, *UEFI' "$inf")
+	DEVICE=$(grep -m1 'Firmware_Install, *UEFI' "$inf")
 	DEVICE=$(echo "$DEVICE" | cut -d'{' -f2 | cut -d'}' -f1)
 	DEVICE=$(echo "$DEVICE" | tr '[:upper:]' '[:lower:]')
 	sed -i "s|{DEVICE}|$DEVICE|g" "$FWDIR"/*.metainfo.xml
 
 	MODELFMT=$(grep '^Device' "$TMP"/**/ReadMe.txt | cut -d':' -f2)
-	MODELFMT=$(echo "$MODELFMT" | sed 's|^ +||g' | sed 's| +$||g')
+	MODELFMT=$(echo "$MODELFMT" | sed -E 's|^ +||g' | sed -E 's| +$||g')
 	sed -i "s|{MODELFMT}|$MODELFMT|g" "$FWDIR"/*.metainfo.xml
 
-	DRIVERVER=$(grep '^DriverVer' "$inf" | sed 's| +||g')
+	DRIVERVER=$(grep '^DriverVer' "$inf" | sed -E 's| +||g')
 	DRIVERVER=$(echo "$DRIVERVER" | cut -d'=' -f2)
 	MSVER=$(echo "$DRIVERVER" | cut -d',' -f2)
 	sed -i "s|{MSVER}|$MSVER|g" "$FWDIR"/*.metainfo.xml
@@ -144,9 +144,9 @@ grep -lR 'Firmware_Install,UEFI' "$TMP" | while IFS= read -r inf; do
 	sed -i "s|{TIMESTAMP}|$TIMESTAMP|g" "$FWDIR"/*.metainfo.xml
 
 	UEFIVER=$(grep 'FirmwareVersion' "$inf" | cut -d',' -f5 | sed 's|\r||')
-	MAJOR=$(($(("$UEFIVER" >> 24)) & 0xff))
-	MINOR=$(($(("$UEFIVER" >> 16)) & 0xff))
-	REV=$(("$UEFIVER" & 0xffff))
+	MAJOR=$(( (UEFIVER >> 24) & 0xff ))
+	MINOR=$(( (UEFIVER >> 16) & 0xff ))
+	REV=$(( UEFIVER & 0xffff ))
 	UEFIVER="$MAJOR.$MINOR.$REV"
 	sed -i "s|{UEFIVER}|$UEFIVER|g" "$FWDIR"/*.metainfo.xml
 done
