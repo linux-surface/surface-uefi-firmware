@@ -2,16 +2,11 @@
 
 This is a (mostly) automated patcher for converting the UEFI firmware updates
 that Microsoft ships with their official driver installation packages into a
-format that can be installed under linux using `fwupd`.
+format that can be installed under linux using fwupd.
 
 Luckily for us Microsoft uses UEFI capsules for their firmwares, which is a
-standarized format already supported by `fwupd`. All we have to do is add a
-little bit of metadata, which can be automated.
-
-### Download?
-
-Not yet, there is still some stuff that needs to be ironed out. However, in
-the meantime, you can create the neccessary files yourself.
+standarized format already supported by fwupd. All we have to do is add a
+little bit of metadata.
 
 ### How?
 
@@ -21,7 +16,7 @@ the meantime, you can create the neccessary files yourself.
 /*
  * You are attempting to flash the firmware on an extemely locked down system.
  * It is unknown if the device can recover itself from a bad firmware flash.
- * 
+ *
  * NO responsibility is taken for damages to your hardware or any other
  * consequences you may face because of flashing your firmware using unofficial
  * and unsupported tools.
@@ -55,55 +50,39 @@ that you are currently in the `surface-uefi-firmware` directory:
 
 ```
 .
-├── SurfaceBook2_Win10_18362_20.012.20538.0.msi
+├── SurfaceBook2_Win10_19041_22.023.33295.0.msi
 └── surface-uefi-firmware
-    ├── prep.sh
     ├── README.sh
     ├── repack.sh
     └── template.metainfo.xml
 
-1 directory, 5 files
+1 directory, 4 files
 ```
 
-First you need to run the MSI you just downloaded through the `prep.sh` script.
-
-This script will make sure that the first part of the filename clearly
-identifies the model and SKU (WiFi vs LTE). It will output the new filename
-of the file (or the old one if no changes were neccessary), please use that
-as of now.
+You will need to run the `repack.sh` script, which will unpack the MSI,
+extract all UEFI firmwares from it, and generate fwupd metadata for it.
 
 ```bash
-$ ./prep.sh ../SurfaceBook2_Win10_18362_20.012.20538.0.msi
- > No changes neccessary! Filename stays SurfaceBook2_Win10_18362_20.012.20538.0.msi
-```
-
-Now run the `repack.sh` script which will unpack the MSI, extract all UEFI
-firmwares from it, and generate `fwupd` metadata for it.
-
-We are going to invoke it in `cab` mode, which will additionally package the
-firmwares so that you can flash them directly using `fwupd`.
-
-```bash
-$ ./repack.sh -m cab -f ../SurfaceBook2_Win10_18362_20.012.20538.0.msi -o out
+$ ./repack.sh -f ../SurfaceBook2_Win10_19041_22.023.33295.0.msi -o out
 ```
 
 Once the script finishes you can find a list of cab files inside of the out
 folder:
 
 ```bash
-$ ls -l out/**/*.cab
-out/SurfaceBook2/SurfaceBook2_SurfaceISH_36.567.12.0.cab
-out/SurfaceBook2/SurfaceBook2_SurfaceTouch_0_238.0.1.1.cab
-out/SurfaceBook2/SurfaceBook2_SurfaceME_11.8.50.3448.cab
-out/SurfaceBook2/SurfaceBook2_SurfaceTouch_238.0.1.1.cab
-out/SurfaceBook2/SurfaceBook2_SurfaceSAM_182.1004.139.0.cab
-out/SurfaceBook2/SurfaceBook2_SurfaceUEFI_389.2837.768.0.cab
+$ ls -l out
+out/SurfaceISH_36.2.14092_7a8be0e8-239e-452c-8281-ca184427982c.cab
+out/SurfaceTouch_0_242.11.271_5773662e-2343-48b5-b018-db09eae2ea41.cab
+out/SurfaceTouch_242.0.261_5917bcbe-626f-4b76-89d1-b0a8b7a6707a.cab
+out/surfaceme_184.90.3987_5f0f3ae0-5d9d-4d64-9385-1fa696ab1719.cab
+out/surfacesam_182.9.139_37da9c3d-6b50-4dbf-82b8-46ca912d98f2.cab
+out/surfaceuefi_98.1.8960_6726b589-d1de-4f26-b2d7-7ac953210d39.cab
 ```
 
-You can now install them with `fwupd`
+You can now install them with fwupd
 
 ```bash
-$ fwupdmgr install <path to cab file>
+$ fwupdmgr install --allow-older --allow-reinstall --force <path to cab file>
 ```
 
 ### Why?
@@ -112,23 +91,5 @@ Because I don't want to dualboot, and reinstalling Windows every few months
 will cost more time over the long run than developing this.
 
 Additionally, this is more open than the Windows firmware update process. This
-allows you to downgrade the firmware in the event that you *really really 
+allows you to downgrade the firmware in the event that you *really really
 need to*, unlike Windows.
-
-### But I don't want to do all of this myself!
-
-So, it is possible to set up a custom remote for fwupd, so that you can get
-updates like through your package manager. Sadly, the whole process is very
-much geared towards the official remote (the LVFS), so it needs some work to
-iron out all the details and to integrate them into our current repository
-management system.
-
-The main issue is that it's almost impossible to automate the generation
-of the metadata any further, because Microsofts website does not support
-scripted downloads.
-
-This means a real person needs to monitor it for changes, download the updated
-MSIs, generate the metadata by hand, and then upload it to the CI which could
-then process it further and generate repository metadata. But as mentioned
-before, this will need some work, especially since we don't want to rush out
-something that might impact not just your installation but the actual hardware.

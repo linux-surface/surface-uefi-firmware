@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="firmware">
-	<id>com.surfacelinux.firmware.{MODEL}.{FIRMWARE}</id>
+	<id>com.surfacelinux.firmware.{DEVICE}</id>
 	<provides>
 		<firmware type="flashed">{DEVICE}</firmware>
 	</provides>
-	<name>{MODELFMT}</name>
-	<summary>{FIRMWARE} for {MODELFMT}, version {MSVER}</summary>
+	<name>Surface Firmware</name>
+	<summary>Firmware for {DEVICE}</summary>
 	<description>
 		<p>Updating the firmware on your device improves performance and adds new features.</p>
 	</description>
@@ -20,8 +20,7 @@
 	<project_license>proprietary</project_license>
 	<developer_name>Microsoft</developer_name>
 	<releases>
-		<!-- version: "{MSVER}" -->
-		<release version="{UEFIVER}" timestamp="{TIMESTAMP}">
+		<release version="{VERSION}" timestamp="{TIMESTAMP}">
 			<description>
 				<p>Please visit the Microsoft homepage to find more information about this update.</p>
 				<p>The computer will be restarted automatically after updating completely. Do NOT turn off your computer or remove the AC adaptor while update is in progress.</p>
