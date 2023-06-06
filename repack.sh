@@ -70,7 +70,7 @@ repackinf()
 	FIRMWARE="$(basename "${DIR}")"
 
 	# Create a working directory
-	TEMP="$(mktemp -d)"
+	TEMP="$(mktemp -p . -d)"
 
 	# Copy over files
 	BINFILE="$(find "${DIR}" -iname '*.bin' -or -iname '*.cap' | head -n1)"
@@ -130,7 +130,7 @@ repackmsi()
 	echo "==> Extracting ${MSI}"
 
 	# Extract the MSI
-	TEMP="$(mktemp -d)"
+	TEMP="$(mktemp -p . -d)"
 	msiextract -C "${TEMP}" "${MSI}" > /dev/null
 
 	# Convert all .inf files to unix format
@@ -155,7 +155,7 @@ repackcab()
 	echo "==> Extracting ${CAB}"
 
 	# Extract the CAB
-	TEMP="$(mktemp -d)"
+	TEMP="$(mktemp -p . -d)"
 	gcab -C "${TEMP}" -x "${CAB}" > /dev/null
 
 	# Convert all .inf files to unix format
