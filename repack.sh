@@ -122,6 +122,22 @@ repackinf()
 	rm -r "${TEMP}"
 }
 
+repackdir()
+{
+	DIR="${1}"
+	OUT="${2}"
+
+	# Convert all .inf files to unix format
+	find "${DIR}" -iname '*.inf' -exec sh -c 'dos2unix "$0" > /dev/null 2>&1' {} \;
+
+	# Repack all UEFI capsule updates found in the directory
+	grep -lR 'Firmware_Install,UEFI' "${DIR}" | while IFS= read -r INF; do
+		echo "==> Repacking ${INF}"
+
+		repackinf "${INF}" "${OUT}"
+	done
+}
+
 repackmsi()
 {
 	MSI="${1}"
@@ -133,15 +149,8 @@ repackmsi()
 	TEMP="$(mktemp -p . -d)"
 	msiextract -C "${TEMP}" "${MSI}" > /dev/null
 
-	# Convert all .inf files to unix format
-	find "${TEMP}" -iname '*.inf' -exec sh -c 'dos2unix "$0" > /dev/null 2>&1' {} \;
-
-	# Repack all UEF capsule updates found in the MSI
-	grep -lR 'Firmware_Install,UEFI' "${TEMP}" | while IFS= read -r INF; do
-		echo "==> Repacking ${INF}"
-
-		repackinf "${INF}" "${OUT}"
-	done
+	# Repack all .inf files in the extracted MSI
+	repackdir "${TEMP}" "${OUT}"
 
 	# Clean up
 	rm -r "${TEMP}"
@@ -180,6 +189,8 @@ elif echo "${FILE}" | grep -Eiq "\.cab$"; then
 	repackcab "${FILE}" "${OUTPUT}"
 elif echo "${FILE}" | grep -Eiq "\.inf$"; then
 	repackinf "${FILE}" "${OUTPUT}"
+elif [ -d "${FILE}" ]; then
+	repackdir "${FILE}" "${OUTPUT}"
 else
 	echo "==> Invalid file type!"
 	exit 1
