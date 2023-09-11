@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 FILE=""
 OUTPUT=""
@@ -76,6 +76,11 @@ repackinf()
 	BINFILE="$(find "${DIR}" -iname '*.bin' -or -iname '*.cap' | head -n1)"
 	CATFILE="$(find "${DIR}" -iname '*.cat' | head -n1)"
 	INFFILE="$(find "${DIR}" -iname '*.inf')"
+
+	if [ "$BINFILE" = "" ]; then
+		echo "==> Skipping ${INF}"
+		return 0
+	fi
 
 	cp "${BINFILE}" "${TEMP}/firmware.bin"
 	cp "${CATFILE}" "${TEMP}/firmware.cat"
