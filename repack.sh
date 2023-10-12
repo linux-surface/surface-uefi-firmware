@@ -10,10 +10,10 @@ usage()
 	echo "Repackages Microsoft Surface firmware for fwupd"
 	echo
 	echo "Options:"
-	echo "    -h    This help message"
-	echo "    -f    The file to repack"
-	echo "    -o    The directory where to save the output"
-	echo "          (default is '$OUTPUT')"
+	echo "    -h              This help message"
+	echo "    -f <FILE.msi>   The file to repack"
+	echo "    -o <OUTPUTDIR]  The directory where to save the output"
+	echo "                    (default is '$OUTPUT')"
 	exit
 }
 
@@ -47,28 +47,20 @@ fi
 
 if [ "$FILE" = "" ]; then
 	echo "ERROR: No filename specified!"
-	exit
+	exit 1
 fi
 
 if [ "$OUTPUT" = "" ]; then
 	echo "ERROR: No output directory specified!"
-	exit
+	exit 1
 fi
 
-if ! command -v "msiextract" > /dev/null; then
-	echo "ERROR: command 'msiextract' not found, please install the corresponding package"
-	exit
-fi
+for c in msiextract gcab dos2unix; do
+    if ! command -v $c > /dev/null; then
+	echo "ERROR: command '$c' not found, please install the corresponding package"
+	exit 1
+done
 
-if ! command -v "gcab" > /dev/null; then
-	echo "ERROR: command 'gcab' not found, please install the corresponding package"
-	exit
-fi
-
-if ! command -v "dos2unix" > /dev/null; then
-	echo "ERROR: command 'dos2unix' not found, please install the corresponding package"
-	exit
-fi
 
 repackinf()
 {
