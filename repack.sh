@@ -1,8 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-FILE=""
-OUTPUT="fwupdates"
+declare -g FILE=""
+declare -g OUTPUT="fwupdates"
+declare -g CAB_ARRAY=()
 
 usage()
 {
@@ -10,11 +11,11 @@ usage()
 	echo "Repackages Microsoft Surface firmware for fwupd"
 	echo
 	echo "Options:"
-	echo "    -h              This help message"
 	echo "    -f <FILE>       The file to repack"
 	echo "                    (can be .msi, .cab, .inf, or a directory)"
 	echo "    -o <OUTPUTDIR]  The directory where to save the output"
 	echo "                    (default is '$OUTPUT')"
+	echo "    -h              This help message"
 	exit
 }
 
@@ -62,7 +63,39 @@ for c in msiextract gcab dos2unix; do
 	exit 1
 done
 
+main()
+{
+    mkdir -p "${OUTPUT}"
 
+    case "${FILE}" in
+	*.msi) repackmsi "${FILE}" "${OUTPUT}"
+	       ;;
+	*.cab) repackcab "${FILE}" "${OUTPUT}"
+	       ;;
+	*.inf) repackinf "${FILE}" "${OUTPUT}"
+	       ;;
+	*) if [ -d "${FILE}" ]; then
+	       repackdir "${FILE}" "${OUTPUT}"
+	   else
+	       echo "==> Invalid file type!"
+	       exit 1
+	   fi
+    esac
+
+    if [[ ${#CAB_ARRAY[@]} -gt 0 ]]; then
+	echo "Success!"
+	echo "If you wish, you may now install the firmware like so:"
+	echo
+	local f
+	for f in "${CAB_ARRAY[@]}"; do
+	    echo -n "	sudo fwupdmgr install --allow-older --no-reboot-check "
+	    echo "'$f'"
+	done
+    fi	
+}    
+
+
+declare -g DEVICE CATEGORY VERSION TIMESTAMP
 repackinf()
 {
 	# Parse parameters
@@ -94,14 +127,10 @@ repackinf()
 	sed -i "s|$(basename "${BINFILE}")|firmware.bin|g" "${TEMP}/firmware.inf"
 	sed -i "s|$(basename "${CATFILE}")|firmware.cat|g" "${TEMP}/firmware.inf"
 
-	# Create metainfo file
-	mktemplate > "${TEMP}/firmware.metainfo.xml"
-
 	# Update the device GUID
 	DEVICE="$(grep -m1 'Firmware_Install, *UEFI' "${TEMP}/firmware.inf")"
 	DEVICE="$(echo "${DEVICE}" | cut -d'{' -f2 | cut -d'}' -f1)"
 	DEVICE="$(echo "${DEVICE}" | tr '[:upper:]' '[:lower:]')"
-	sed -i "s|{DEVICE}|${DEVICE}|g" "${TEMP}/firmware.metainfo.xml"
 
 	# Update firmware type
 	CATEGORY="X-Device"
@@ -110,7 +139,6 @@ repackinf()
 	elif echo "${FIRMWARE}" | grep -q ME; then
 		CATEGORY="X-ManagementEngine"
 	fi
-	sed -i "s|{CATEGORY}|${CATEGORY}|g" "${TEMP}/firmware.metainfo.xml"
 
 	# Update firmware version
 	VERSION="$(grep 'FirmwareVersion' "${TEMP}/firmware.inf" | cut -d',' -f5 | sed 's|\r||')"
@@ -118,17 +146,22 @@ repackinf()
 	MINOR="$(( (VERSION >> 16) & 0xff ))"
 	REV="$(( VERSION & 0xffff ))"
 	VERSION="${MAJOR}.${MINOR}.${REV}"
-	sed -i "s|{VERSION}|${VERSION}|g" "${TEMP}/firmware.metainfo.xml"
 
 	# Update firmware timestamp
 	TIMESTAMP="$(grep '^DriverVer' "${TEMP}/firmware.inf" | sed -E 's| +||g')"
 	TIMESTAMP="$(echo "${TIMESTAMP}" | cut -d'=' -f2 | cut -d',' -f1)"
 	TIMESTAMP="$(date '+%s' --date "${TIMESTAMP}")"
-	sed -i "s|{TIMESTAMP}|${TIMESTAMP}|g" "${TEMP}/firmware.metainfo.xml"
+
+	# Create metainfo file from $DEVICE, $CATEGORY, $VERSION, & $TIMESTAMP
+	filltemplate > "${TEMP}/firmware.metainfo.xml"
 
 	# Create a cab file of the firmware
-	gcab -cn "${OUT}/${FIRMWARE}_${VERSION}_${DEVICE}.cab" "${TEMP}"/*
+	local cabfile="${OUT}/${FIRMWARE}_${VERSION}_${DEVICE}.cab"
+	gcab -cn "$cabfile" "${TEMP}"/*
 	rm -r "${TEMP}"
+	
+	# Remember the cab filename for later
+	CAB_ARRAY+=($cabfile)
 }
 
 repackdir()
@@ -190,22 +223,24 @@ repackcab()
 	rm -r "${TEMP}"
 }
 
-mktemplate()
+filltemplate()
 {
+    # Fills in template with data from global variables:
+    # $DEVICE, $CATEGORY, $VERSION, & $TIMESTAMP
     cat <<EOF 
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="firmware">
-	<id>com.surfacelinux.firmware.{DEVICE}</id>
+	<id>com.surfacelinux.firmware.${DEVICE}</id>
 	<provides>
-		<firmware type="flashed">{DEVICE}</firmware>
+		<firmware type="flashed">${DEVICE}</firmware>
 	</provides>
 	<name>Surface Firmware</name>
-	<summary>Firmware for {DEVICE}</summary>
+	<summary>Firmware for ${DEVICE}</summary>
 	<description>
 		<p>Updating the firmware on your device improves performance and adds new features.</p>
 	</description>
 	<categories>
-		<category>{CATEGORY}</category>
+		<category>${CATEGORY}</category>
 	</categories>
 	<custom>
 		<value key="LVFS::UpdateProtocol">org.uefi.capsule</value>
@@ -215,7 +250,7 @@ mktemplate()
 	<project_license>proprietary</project_license>
 	<developer_name>Microsoft</developer_name>
 	<releases>
-		<release version="{VERSION}" timestamp="{TIMESTAMP}">
+		<release version="${VERSION}" timestamp="${TIMESTAMP}">
 			<description>
 				<p>Please visit the Microsoft homepage to find more information about this update.</p>
 				<p>The computer will be restarted automatically after updating completely. Do NOT turn off your computer or remove the AC adaptor while update is in progress.</p>
@@ -227,19 +262,5 @@ EOF
 
 }
 
-mkdir -p "${OUTPUT}"
+main "$@"
 
-case "${FILE}" in
-    *.msi) repackmsi "${FILE}" "${OUTPUT}"
-	   ;;
-    *.cab) repackcab "${FILE}" "${OUTPUT}"
-	   ;;
-    *.inf) repackinf "${FILE}" "${OUTPUT}"
-	   ;;
-    *) if [ -d "${FILE}" ]; then
-	   repackdir "${FILE}" "${OUTPUT}"
-       else
-	   echo "==> Invalid file type!"
-	   exit 1
-       fi
-esac
