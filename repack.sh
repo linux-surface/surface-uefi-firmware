@@ -95,7 +95,7 @@ repackinf()
 	sed -i "s|$(basename "${CATFILE}")|firmware.cat|g" "${TEMP}/firmware.inf"
 
 	# Create metainfo file
-	cp template.metainfo.xml "${TEMP}/firmware.metainfo.xml"
+	mktemplate > "${TEMP}/firmware.metainfo.xml"
 
 	# Update the device GUID
 	DEVICE="$(grep -m1 'Firmware_Install, *UEFI' "${TEMP}/firmware.inf")"
@@ -188,6 +188,43 @@ repackcab()
 
 	# Clean up
 	rm -r "${TEMP}"
+}
+
+mktemplate()
+{
+    cat <<EOF 
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="firmware">
+	<id>com.surfacelinux.firmware.{DEVICE}</id>
+	<provides>
+		<firmware type="flashed">{DEVICE}</firmware>
+	</provides>
+	<name>Surface Firmware</name>
+	<summary>Firmware for {DEVICE}</summary>
+	<description>
+		<p>Updating the firmware on your device improves performance and adds new features.</p>
+	</description>
+	<categories>
+		<category>{CATEGORY}</category>
+	</categories>
+	<custom>
+		<value key="LVFS::UpdateProtocol">org.uefi.capsule</value>
+	</custom>
+	<url type="homepage">https://www.microsoft.com</url>
+	<metadata_license>CC0-1.0</metadata_license>
+	<project_license>proprietary</project_license>
+	<developer_name>Microsoft</developer_name>
+	<releases>
+		<release version="{VERSION}" timestamp="{TIMESTAMP}">
+			<description>
+				<p>Please visit the Microsoft homepage to find more information about this update.</p>
+				<p>The computer will be restarted automatically after updating completely. Do NOT turn off your computer or remove the AC adaptor while update is in progress.</p>
+			</description>
+		</release>
+	</releases>
+</component>
+EOF
+
 }
 
 mkdir -p "${OUTPUT}"
