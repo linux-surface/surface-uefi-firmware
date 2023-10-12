@@ -6,12 +6,13 @@ OUTPUT="fwupdates"
 
 usage()
 {
-	echo "Usage: $0 <FILE.msi> [OUTPUTDIR]"
+	echo "Usage: $0 <FILE> [OUTPUTDIR]"
 	echo "Repackages Microsoft Surface firmware for fwupd"
 	echo
 	echo "Options:"
 	echo "    -h              This help message"
-	echo "    -f <FILE.msi>   The file to repack"
+	echo "    -f <FILE>       The file to repack"
+	echo "                    (can be .msi, .cab, .inf, or a directory)"
 	echo "    -o <OUTPUTDIR]  The directory where to save the output"
 	echo "                    (default is '$OUTPUT')"
 	exit
@@ -65,15 +66,15 @@ done
 repackinf()
 {
 	# Parse parameters
-	INF="${1}"
-	OUT="${2}"
+	local INF="${1}"
+	local OUT="${2}"
 
 	# What is the name of the firmware?
-	DIR="$(dirname "${INF}")"
-	FIRMWARE="$(basename "${DIR}")"
+	local DIR="$(dirname "${INF}")"
+	local FIRMWARE="$(basename "${DIR}")"
 
 	# Create a working directory
-	TEMP="$(mktemp -p . -d)"
+	local TEMP="$(mktemp -p . -d)"
 
 	# Copy over files
 	BINFILE="$(find "${DIR}" -iname '*.bin' -or -iname '*.cap' | head -n1)"
@@ -132,8 +133,8 @@ repackinf()
 
 repackdir()
 {
-	DIR="${1}"
-	OUT="${2}"
+	local DIR="${1}"
+	local OUT="${2}"
 
 	# Convert all .inf files to unix format
 	find "${DIR}" -iname '*.inf' -exec sh -c 'dos2unix "$0" > /dev/null 2>&1' {} \;
@@ -148,8 +149,8 @@ repackdir()
 
 repackmsi()
 {
-	MSI="${1}"
-	OUT="${2}"
+	local MSI="${1}"
+	local OUT="${2}"
 
 	echo "==> Extracting ${MSI}"
 
@@ -166,8 +167,8 @@ repackmsi()
 
 repackcab()
 {
-	CAB="${1}"
-	OUT="${2}"
+	local CAB="${1}"
+	local OUT="${2}"
 
 	echo "==> Extracting ${CAB}"
 
@@ -191,15 +192,17 @@ repackcab()
 
 mkdir -p "${OUTPUT}"
 
-if echo "${FILE}" | grep -Eiq "\.msi$"; then
-	repackmsi "${FILE}" "${OUTPUT}"
-elif echo "${FILE}" | grep -Eiq "\.cab$"; then
-	repackcab "${FILE}" "${OUTPUT}"
-elif echo "${FILE}" | grep -Eiq "\.inf$"; then
-	repackinf "${FILE}" "${OUTPUT}"
-elif [ -d "${FILE}" ]; then
-	repackdir "${FILE}" "${OUTPUT}"
-else
-	echo "==> Invalid file type!"
-	exit 1
-fi
+case "${FILE}" in
+    *.msi) repackmsi "${FILE}" "${OUTPUT}"
+	   ;;
+    *.cab) repackcab "${FILE}" "${OUTPUT}"
+	   ;;
+    *.inf) repackinf "${FILE}" "${OUTPUT}"
+	   ;;
+    *) if [ -d "${FILE}" ]; then
+	   repackdir "${FILE}" "${OUTPUT}"
+       else
+	   echo "==> Invalid file type!"
+	   exit 1
+       fi
+esac
