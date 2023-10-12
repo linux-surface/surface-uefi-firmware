@@ -13,42 +13,45 @@ usage()
 	echo "Options:"
 	echo "    -f <FILE>       The file to repack"
 	echo "                    (can be .msi, .cab, .inf, or a directory)"
-	echo "    -o <OUTPUTDIR]  The directory where to save the output"
+	echo "    -o <OUTPUTDIR>  The directory where to save the output"
 	echo "                    (default is '$OUTPUT')"
 	echo "    -h              This help message"
-	exit
 }
 
 while getopts ":hf:o:" args; do
 	case "$args" in
 	f)
 		FILE="$OPTARG"
+		shift 2
 		;;
 	o)
 		OUTPUT="$OPTARG"
+		shift 2
 		;;
 	h)
 		usage
+		exit
 		;;
 	*)
 		echo "ERROR: Invalid command line option '$args'"
-		exit
+		exit 1
 		;;
 	esac
 done
 
-if [ "$FILE" = "" ]; then
-    FILE="$1"
+if [ "$FILE" = "" -a $# -gt 0 ]; then
+    FILE="${1}"
     shift
 fi
 
-if [ "$1" != "" ]; then
-    OUTPUT="$1"
+if [ "$#" -gt 0 ]; then
+    OUTPUT="${1}"
     shift
 fi
 
 if [ "$FILE" = "" ]; then
 	echo "ERROR: No filename specified!"
+	usage
 	exit 1
 fi
 
@@ -61,6 +64,7 @@ for c in msiextract gcab dos2unix; do
     if ! command -v $c > /dev/null; then
 	echo "ERROR: command '$c' not found, please install the corresponding package"
 	exit 1
+    fi
 done
 
 main()
@@ -77,7 +81,7 @@ main()
 	*) if [ -d "${FILE}" ]; then
 	       repackdir "${FILE}" "${OUTPUT}"
 	   else
-	       echo "==> Invalid file type!"
+	       echo "==> ${FILE}: Invalid file type!"
 	       exit 1
 	   fi
     esac
@@ -88,9 +92,11 @@ main()
 	echo
 	local f
 	for f in "${CAB_ARRAY[@]}"; do
-	    echo -n "	sudo fwupdmgr install --allow-older --no-reboot-check "
+	    echo -n "  sudo fwupdmgr install --allow-older --no-reboot-check --force "
 	    echo "'$f'"
 	done
+    else
+	echo "No firmware found in '${FILE}'"
     fi	
 }    
 
@@ -173,7 +179,8 @@ repackdir()
 	find "${DIR}" -iname '*.inf' -exec sh -c 'dos2unix "$0" > /dev/null 2>&1' {} \;
 
 	# Repack all UEFI capsule updates found in the directory
-	grep -lR 'Firmware_Install,UEFI' "${DIR}" | while IFS= read -r INF; do
+	local inffiles=($(grep -lR 'Firmware_Install,UEFI' "${DIR}"))
+	for INF in ${inffiles[@]}; do
 		echo "==> Repacking ${INF}"
 
 		repackinf "${INF}" "${OUT}"
