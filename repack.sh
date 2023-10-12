@@ -2,17 +2,18 @@
 set -euo pipefail
 
 FILE=""
-OUTPUT=""
+OUTPUT="fwupdates"
 
 usage()
 {
-	echo "Usage: $0 [OPTION]..."
+	echo "Usage: $0 <FILE.msi> [OUTPUTDIR]"
 	echo "Repackages Microsoft Surface firmware for fwupd"
 	echo
 	echo "Options:"
 	echo "    -h    This help message"
 	echo "    -f    The file to repack"
 	echo "    -o    The directory where to save the output"
+	echo "          (default is '$OUTPUT')"
 	exit
 }
 
@@ -33,6 +34,16 @@ while getopts ":hf:o:" args; do
 		;;
 	esac
 done
+
+if [ "$FILE" = "" ]; then
+    FILE="$1"
+    shift
+fi
+
+if [ "$1" != "" ]; then
+    OUTPUT="$1"
+    shift
+fi
 
 if [ "$FILE" = "" ]; then
 	echo "ERROR: No filename specified!"
