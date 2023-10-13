@@ -63,27 +63,39 @@ You will need to run the `repack.sh` script, which will unpack the MSI,
 extract all UEFI firmwares from it, and generate fwupd metadata for it.
 
 ```bash
-$ ./repack.sh -f ../SurfaceBook2_Win10_19041_22.023.33295.0.msi -o out
+$ ./repack.sh ../SurfaceBook2_Win10_19041_22.023.33295.0.msi -o fwupdates
 ```
 
-Once the script finishes you can find a list of cab files inside of the out
-folder:
+Once the script finishes you can find a list of cab files inside of
+the fwupdates folder:
 
 ```bash
-$ ls -l out
-out/SurfaceISH_36.2.14092_7a8be0e8-239e-452c-8281-ca184427982c.cab
-out/SurfaceTouch_0_242.11.271_5773662e-2343-48b5-b018-db09eae2ea41.cab
-out/SurfaceTouch_242.0.261_5917bcbe-626f-4b76-89d1-b0a8b7a6707a.cab
-out/surfaceme_184.90.3987_5f0f3ae0-5d9d-4d64-9385-1fa696ab1719.cab
-out/surfacesam_182.9.139_37da9c3d-6b50-4dbf-82b8-46ca912d98f2.cab
-out/surfaceuefi_98.1.8960_6726b589-d1de-4f26-b2d7-7ac953210d39.cab
+$ tree fwupdates/
+fwupdates/
+├── SurfaceKeyboard_8.0.2048_96729509-963f-4608-bb2f-4788d0c76404.cab
+├── surfaceme_208.8.13570_f3d5747d-24e3-44dd-9118-d332d932bced.cab
+├── SurfacePD_1.0.1025_d8a91eed-fb95-4a5f-84db-9497294247e7.cab
+├── surfacesam_6.1.12427_52ef6898-ded3-40bc-a1ee-36cc0459b1d4.cab
+├── surfacesmf_57.0.299_8230d1a7-94f1-4f2d-934b-5fa2fb6a91c0.cab
+├── surfacetouch_4.1.1536_408b2012-cc30-4abc-9fb9-545f18841262.cab
+├── SurfaceTPM_7.2.512_a1adec1f-c12a-461d-b69c-114259d40cb6.cab
+├── surfacetrackpad_0.8.0_1c12a6dd-54c2-4b20-8c17-3d3372a11096.cab
+└── surfaceuefi_15.0.2956_a1bb21b6-5cd1-48ea-ad29-f7c3236ebf0a.cab
 ```
 
-You can now install them with fwupd
+Using fwupd, you can install all the firmware files at once
+
+``` bash
+$ for f in fwupdates/*; do 
+    sudo fwupdmgr install --allow-older --no-reboot-check "$f"
+  done
+```
+or à la carte
 
 ```bash
-$ fwupdmgr install --allow-older --allow-reinstall --force <path to cab file>
+$ fwupdmgr install --allow-older --force <path-to-cab-file>
 ```
+
 
 ### Why?
 
