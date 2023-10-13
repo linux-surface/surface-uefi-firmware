@@ -44,7 +44,6 @@ while true; do
 		;;
 	esac
 done
-showargs "$@"
 
 if [ "$FILE" = "" -a $# -gt 0 ]; then
     FILE="${1}"
