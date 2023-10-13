@@ -14,14 +14,16 @@ usage()
 	echo "    FILE       The file to repack"
 	echo "                 (can be .msi, .cab, .inf, or a directory)"
 	echo "    OUTPUTDIR  The directory where to save the output"
-	echo "               (default is '$OUTPUT')"
+	echo "               (Optional; default is '$OUTPUT')"
 	echo "Options:"
 	echo "    -h         This help message"
 }
 
+
+# For backwards compatibility, allow -f and -o flags.
 eval set -- "$(getopt -o 'hf:o:' --long 'help,input:,output:' -- "$@")"
 while true; do
-	case "$1" in
+	case "${1}" in
 	-f|--input)
 		FILE="$2"
 		shift 2
@@ -35,11 +37,11 @@ while true; do
 		exit
 		;;
 	--)
-	    shift
-	    break
-	    ;;
+		shift
+		break
+		;;
 	*)
-		echo "ERROR: Invalid command line option '$1'"
+		echo "ERROR: Invalid command line option '${1}'"
 		exit 1
 		;;
 	esac
@@ -53,6 +55,11 @@ fi
 if [ "$#" -gt 0 ]; then
     OUTPUT="${1}"
     shift
+fi
+
+if [ "$#" -gt 0 ]; then
+    echo "ERROR: Excess arguments: $@"
+    exit 1
 fi
 
 if [ "$FILE" = "" ]; then
