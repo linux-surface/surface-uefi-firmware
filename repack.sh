@@ -10,34 +10,41 @@ usage()
 	echo "Usage: $0 <FILE> [OUTPUTDIR]"
 	echo "Repackages Microsoft Surface firmware for fwupd"
 	echo
+	echo "Arguments:"
+	echo "    FILE       The file to repack"
+	echo "                 (can be .msi, .cab, .inf, or a directory)"
+	echo "    OUTPUTDIR  The directory where to save the output"
+	echo "               (default is '$OUTPUT')"
 	echo "Options:"
-	echo "    -f <FILE>       The file to repack"
-	echo "                    (can be .msi, .cab, .inf, or a directory)"
-	echo "    -o <OUTPUTDIR>  The directory where to save the output"
-	echo "                    (default is '$OUTPUT')"
-	echo "    -h              This help message"
+	echo "    -h         This help message"
 }
 
-while getopts ":hf:o:" args; do
-	case "$args" in
-	f)
-		FILE="$OPTARG"
+eval set -- "$(getopt -o 'hf:o:' --long 'help,input:,output:' -- "$@")"
+while true; do
+	case "$1" in
+	-f|--input)
+		FILE="$2"
 		shift 2
 		;;
-	o)
-		OUTPUT="$OPTARG"
+	-o|--output)
+		OUTPUT="$2"
 		shift 2
 		;;
-	h)
+	-h|--help)
 		usage
 		exit
 		;;
+	--)
+	    shift
+	    break
+	    ;;
 	*)
-		echo "ERROR: Invalid command line option '$args'"
+		echo "ERROR: Invalid command line option '$1'"
 		exit 1
 		;;
 	esac
 done
+showargs "$@"
 
 if [ "$FILE" = "" -a $# -gt 0 ]; then
     FILE="${1}"
@@ -66,6 +73,7 @@ for c in msiextract gcab dos2unix; do
 	exit 1
     fi
 done
+
 
 main()
 {
