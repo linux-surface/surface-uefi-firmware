@@ -192,14 +192,14 @@ repackdir()
 	local DIR="${1}"
 	local OUT="${2}"
 
-	# Convert all .inf files to unix format
-	find "${DIR}" -iname '*.inf' -exec sh -c 'dos2unix "$0" > /dev/null 2>&1' {} \;
-
 	# Repack all UEFI capsule updates found in the directory
 	local inffiles=($(grep -lR 'Firmware_Install,UEFI' "${DIR}"))
+	# Convert all .inf files to unix format
+	sed -i 's/\r//' "${inffiles[@]}"
+
+	local INF
 	for INF in ${inffiles[@]}; do
 		echo "==> Repacking ${INF}"
-
 		repackinf "${INF}" "${OUT}"
 	done
 }
@@ -230,16 +230,17 @@ repackcab()
 	echo "==> Extracting ${CAB}"
 
 	# Extract the CAB
-	TEMP="$(mktemp -p . -d)"
+	local TEMP="$(mktemp -p . -d)"
 	gcab -C "${TEMP}" -x "${CAB}" > /dev/null
 
-	# Convert all .inf files to unix format
-	find "${TEMP}" -iname '*.inf' -exec sh -c 'dos2unix "$0" > /dev/null 2>&1' {} \;
-
 	# Repack all UEF capsule updates found in the CAB
-	grep -lR 'Firmware_Install,UEFI' "${TEMP}" | while IFS= read -r INF; do
-		echo "==> Repacking ${INF}"
+	local inffiles=($(grep -lR 'Firmware_Install,UEFI' "${TEMP}"))
+	# Convert all .inf files to unix format
+	sed -i 's/\r//' "${inffiles[@]}"
 
+	local INF
+	for INF in ${inffiles[@]}; do
+		echo "==> Repacking ${INF}"
 		repackinf "${INF}" "${OUT}"
 	done
 
