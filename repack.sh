@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+# GLOBALS
 declare -g FILE=""
 declare -g OUTPUT="fwupdates"
 declare -g CAB_ARRAY=()
@@ -115,7 +116,6 @@ main()
 }    
 
 
-declare -g DEVICE CATEGORY VERSION TIMESTAMP
 repackinf()
 {
 	# Parse parameters
@@ -130,9 +130,10 @@ repackinf()
 	local TEMP="$(mktemp -p . -d)"
 
 	# Copy over files
-	BINFILE="$(find "${DIR}" -iname '*.bin' -or -iname '*.cap' | head -n1)"
-	CATFILE="$(find "${DIR}" -iname '*.cat' | head -n1)"
-	INFFILE="$(find "${DIR}" -iname '*.inf')"
+	local BINFILE CATFILE INFFILE
+	BINFILE="$(find "${DIR}" \( -iname '*.bin' -or -iname '*.cap' \) -print -quit)"
+	CATFILE="$(find "${DIR}" -iname '*.cat' -print -quit)"
+	INFFILE="$(find "${DIR}" -iname '*.inf' -print -quit)"
 
 	if [ "$BINFILE" = "" ]; then
 		echo "==> Skipping ${INF}"
@@ -148,32 +149,35 @@ repackinf()
 	sed -i "s|$(basename "${CATFILE}")|firmware.cat|g" "${TEMP}/firmware.inf"
 
 	# Update the device GUID
-	DEVICE="$(grep -m1 'Firmware_Install, *UEFI' "${TEMP}/firmware.inf")"
-	DEVICE="$(echo "${DEVICE}" | cut -d'{' -f2 | cut -d'}' -f1)"
-	DEVICE="$(echo "${DEVICE}" | tr '[:upper:]' '[:lower:]')"
+	local -l DEVICE		# -l: Values are always lowercase
+	DEVICE="$(awk -F'[{}]' '/Firmware_Install, *UEFI/{print $2}' "${TEMP}/firmware.inf")"
 
 	# Update firmware type
-	CATEGORY="X-Device"
-	if echo "${FIRMWARE}" | grep -q UEFI; then
-		CATEGORY="X-System"
-	elif echo "${FIRMWARE}" | grep -q ME; then
-		CATEGORY="X-ManagementEngine"
-	fi
+	local CATEGORY
+	case "${FIRMWARE}" in
+	    *UEFI*) 	CATEGORY="X-System"		;;
+	    *ME*)	CATEGORY="X-ManagementEngine"	;;
+	    *)		CATEGORY="X-Device"		;;
+	esac
 
 	# Update firmware version
-	VERSION="$(grep 'FirmwareVersion' "${TEMP}/firmware.inf" | cut -d',' -f5 | sed 's|\r||')"
-	MAJOR="$(( (VERSION >> 24) & 0xff ))"
-	MINOR="$(( (VERSION >> 16) & 0xff ))"
-	REV="$(( VERSION & 0xffff ))"
+	local VERSION
+	VERSION="$(grep FirmwareVersion "${TEMP}/firmware.inf" | cut -d, -f5)"
+	VERSION=${VERSION%$'\r\n'}
+	local MAJOR="$(( (VERSION >> 24) & 0xff ))"
+	local MINOR="$(( (VERSION >> 16) & 0xff ))"
+	local REV="$(( VERSION & 0xffff ))"
 	VERSION="${MAJOR}.${MINOR}.${REV}"
 
 	# Update firmware timestamp
+	local TIMESTAMP
 	TIMESTAMP="$(grep '^DriverVer' "${TEMP}/firmware.inf" | sed -E 's| +||g')"
 	TIMESTAMP="$(echo "${TIMESTAMP}" | cut -d'=' -f2 | cut -d',' -f1)"
 	TIMESTAMP="$(date '+%s' --date "${TIMESTAMP}")"
 
 	# Create metainfo file from $DEVICE, $CATEGORY, $VERSION, & $TIMESTAMP
-	filltemplate > "${TEMP}/firmware.metainfo.xml"
+	filltemplate "$DEVICE" "$CATEGORY" "$VERSION" "$TIMESTAMP" \
+		     > "${TEMP}/firmware.metainfo.xml"
 
 	# Create a cab file of the firmware
 	local cabfile="${OUT}/${FIRMWARE}_${VERSION}_${DEVICE}.cab"
@@ -246,8 +250,8 @@ repackcab()
 
 filltemplate()
 {
-    # Fills in template with data from global variables:
-    # $DEVICE, $CATEGORY, $VERSION, & $TIMESTAMP
+    # Fill in the XML template
+    local DEVICE="$1" CATEGORY="$2" VERSION="$3" TIMESTAMP="$4"
     cat <<EOF 
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="firmware">
