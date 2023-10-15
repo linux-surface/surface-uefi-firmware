@@ -154,11 +154,12 @@ repackinf()
 
 	# Update firmware type
 	local CATEGORY
-	case "${FIRMWARE}" in
+	case "$(basename "${INFFILE}")" in
 	    *UEFI*) 	CATEGORY="X-System"		;;
 	    *ME*)	CATEGORY="X-ManagementEngine"	;;
 	    *)		CATEGORY="X-Device"		;;
 	esac
+	echo "category is $CATEGORY"
 
 	# Update firmware version
 	local VERSION
