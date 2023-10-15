@@ -87,13 +87,13 @@ Using fwupd, you can install all the firmware files at once
 
 ``` bash
 $ for f in fwupdates/*; do 
-    sudo fwupdmgr install --allow-older --no-reboot-check "$f"
+    sudo fwupdmgr install --allow-older --allow-reinstall --no-reboot-check "$f"
   done
 ```
 or à la carte
 
 ```bash
-$ fwupdmgr install --allow-older --force <path-to-cab-file>
+$ fwupdmgr install --allow-older --allow-reinstall --force <path-to-cab-file>
 ```
 
 
