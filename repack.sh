@@ -107,7 +107,7 @@ main()
 	echo
 	local f
 	for f in "${CAB_ARRAY[@]}"; do
-	    echo -n "  sudo fwupdmgr install --allow-older --no-reboot-check --force "
+	    echo -n "  sudo fwupdmgr install --allow-older --allow-reinstall --no-reboot-check --force "
 	    echo "'$f'"
 	done
     else
