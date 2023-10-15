@@ -48,7 +48,7 @@ while true; do
 	esac
 done
 
-if [ "$FILE" = "" -a $# -gt 0 ]; then
+if [ "$FILE" = "" ] && [ $# -gt 0 ]; then
     FILE="${1}"
     shift
 fi
@@ -59,7 +59,7 @@ if [ "$#" -gt 0 ]; then
 fi
 
 if [ "$#" -gt 0 ]; then
-    echo "ERROR: Excess arguments: $@"
+    echo "ERROR: Excess arguments: $*"
     exit 1
 fi
 
@@ -184,7 +184,7 @@ repackinf()
 	rm -r "${TEMP}"
 	
 	# Remember the cab filename for later
-	CAB_ARRAY+=($cabfile)
+	CAB_ARRAY+=("$cabfile")
 }
 
 repackdir()
@@ -198,7 +198,7 @@ repackdir()
 	sed -i 's/\r//' "${inffiles[@]}"
 
 	local INF
-	for INF in ${inffiles[@]}; do
+	for INF in "${inffiles[@]}"; do
 		echo "==> Repacking ${INF}"
 		repackinf "${INF}" "${OUT}"
 	done
@@ -239,7 +239,7 @@ repackcab()
 	sed -i 's/\r//' "${inffiles[@]}"
 
 	local INF
-	for INF in ${inffiles[@]}; do
+	for INF in "${inffiles[@]}"; do
 		echo "==> Repacking ${INF}"
 		repackinf "${INF}" "${OUT}"
 	done
