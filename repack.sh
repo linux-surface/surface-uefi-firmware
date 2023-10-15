@@ -163,7 +163,7 @@ repackinf()
 	# Update firmware version
 	local VERSION
 	VERSION="$(grep FirmwareVersion "${TEMP}/firmware.inf" | cut -d, -f5)"
-	VERSION=${VERSION%$'\r\n'}
+	VERSION=${VERSION%$'\r'}
 	local MAJOR="$(( (VERSION >> 24) & 0xff ))"
 	local MINOR="$(( (VERSION >> 16) & 0xff ))"
 	local REV="$(( VERSION & 0xffff ))"
