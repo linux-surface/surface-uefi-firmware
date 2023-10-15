@@ -159,7 +159,6 @@ repackinf()
 	    *ME*)	CATEGORY="X-ManagementEngine"	;;
 	    *)		CATEGORY="X-Device"		;;
 	esac
-	echo "category is $CATEGORY"
 
 	# Update firmware version
 	local VERSION
@@ -172,8 +171,7 @@ repackinf()
 
 	# Update firmware timestamp
 	local TIMESTAMP
-	TIMESTAMP="$(grep '^DriverVer' "${TEMP}/firmware.inf" | sed -E 's| +||g')"
-	TIMESTAMP="$(echo "${TIMESTAMP}" | cut -d'=' -f2 | cut -d',' -f1)"
+	TIMESTAMP="$(awk -F'[=,]' '/^DriverVer/{print $2}' "${TEMP}/firmware.inf")"
 	TIMESTAMP="$(date '+%s' --date "${TIMESTAMP}")"
 
 	# Create metainfo file from $DEVICE, $CATEGORY, $VERSION, & $TIMESTAMP
