@@ -192,10 +192,11 @@ repackdir()
 	local DIR="${1}"
 	local OUT="${2}"
 
+	# Convert all .inf files to UTF-8
+	find . -iname '*.inf' -execdir dos2unix --quiet {} +
+
 	# Repack all UEFI capsule updates found in the directory
 	local inffiles=($(grep -lR 'Firmware_Install,UEFI' "${DIR}"))
-	# Convert all .inf files to unix format
-	sed -i 's/\r//' "${inffiles[@]}"
 
 	local INF
 	for INF in "${inffiles[@]}"; do
@@ -233,10 +234,11 @@ repackcab()
 	local TEMP="$(mktemp -p . -d)"
 	gcab -C "${TEMP}" -x "${CAB}" > /dev/null
 
+	# Convert all .inf files to UTF-8
+	find . -iname '*.inf' -execdir dos2unix --quiet {} +
+
 	# Repack all UEF capsule updates found in the CAB
 	local inffiles=($(grep -lR 'Firmware_Install,UEFI' "${TEMP}"))
-	# Convert all .inf files to unix format
-	sed -i 's/\r//' "${inffiles[@]}"
 
 	local INF
 	for INF in "${inffiles[@]}"; do
