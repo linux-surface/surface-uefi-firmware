@@ -1,81 +1,139 @@
 #!/bin/bash
 set -euo pipefail
 
-FILE=""
-OUTPUT=""
+# GLOBALS
+declare -g FILE=""
+declare -g OUTPUT="fwupdates"
+declare -g CAB_ARRAY=()
 
 usage()
 {
-	echo "Usage: $0 [OPTION]..."
+	echo "Usage: $0 <FILE> [OUTPUTDIR]"
 	echo "Repackages Microsoft Surface firmware for fwupd"
 	echo
+	echo "Arguments:"
+	echo "    FILE       The file to repack"
+	echo "                 (can be .msi, .cab, .inf, or a directory)"
+	echo "    OUTPUTDIR  The directory where to save the output"
+	echo "               (Optional; default is '$OUTPUT')"
 	echo "Options:"
-	echo "    -h    This help message"
-	echo "    -f    The file to repack"
-	echo "    -o    The directory where to save the output"
-	exit
+	echo "    -h         This help message"
 }
 
-while getopts ":hf:o:" args; do
-	case "$args" in
-	f)
-		FILE="$OPTARG"
+
+# For backwards compatibility, allow -f and -o flags.
+eval set -- "$(getopt -o 'hf:o:' --long 'help,input:,output:' -- "$@")"
+while true; do
+	case "${1}" in
+	-f|--input)
+		FILE="$2"
+		shift 2
 		;;
-	o)
-		OUTPUT="$OPTARG"
+	-o|--output)
+		OUTPUT="$2"
+		shift 2
 		;;
-	h)
+	-h|--help)
 		usage
+		exit
+		;;
+	--)
+		shift
+		break
 		;;
 	*)
-		echo "ERROR: Invalid command line option '$args'"
-		exit
+		echo "ERROR: Invalid command line option '${1}'"
+		exit 1
 		;;
 	esac
 done
 
+if [ "$FILE" = "" ] && [ $# -gt 0 ]; then
+    FILE="${1}"
+    shift
+fi
+
+if [ "$#" -gt 0 ]; then
+    OUTPUT="${1}"
+    shift
+fi
+
+if [ "$#" -gt 0 ]; then
+    echo "ERROR: Excess arguments: $*"
+    exit 1
+fi
+
 if [ "$FILE" = "" ]; then
 	echo "ERROR: No filename specified!"
-	exit
+	usage
+	exit 1
 fi
 
 if [ "$OUTPUT" = "" ]; then
 	echo "ERROR: No output directory specified!"
-	exit
+	exit 1
 fi
 
-if ! command -v "msiextract" > /dev/null; then
-	echo "ERROR: command 'msiextract' not found, please install the corresponding package"
-	exit
-fi
+for c in msiextract gcab dos2unix; do
+    if ! command -v $c > /dev/null; then
+	echo "ERROR: command '$c' not found, please install the corresponding package"
+	exit 1
+    fi
+done
 
-if ! command -v "gcab" > /dev/null; then
-	echo "ERROR: command 'gcab' not found, please install the corresponding package"
-	exit
-fi
 
-if ! command -v "dos2unix" > /dev/null; then
-	echo "ERROR: command 'dos2unix' not found, please install the corresponding package"
-	exit
-fi
+main()
+{
+    mkdir -p "${OUTPUT}"
+
+    case "${FILE}" in
+	*.msi) repackmsi "${FILE}" "${OUTPUT}"
+	       ;;
+	*.cab) repackcab "${FILE}" "${OUTPUT}"
+	       ;;
+	*.inf) repackinf "${FILE}" "${OUTPUT}"
+	       ;;
+	*) if [ -d "${FILE}" ]; then
+	       repackdir "${FILE}" "${OUTPUT}"
+	   else
+	       echo "==> ${FILE}: Invalid file type!"
+	       exit 1
+	   fi
+    esac
+
+    if [[ ${#CAB_ARRAY[@]} -gt 0 ]]; then
+	echo "Success!"
+	echo "If you wish, you may now install the firmware like so:"
+	echo
+	local f
+	for f in "${CAB_ARRAY[@]}"; do
+	    echo -n "  sudo fwupdmgr install --allow-older --allow-reinstall --no-reboot-check --force "
+	    echo "'$f'"
+	done
+    else
+	echo "No firmware found in '${FILE}'"
+    fi	
+}    
+
 
 repackinf()
 {
 	# Parse parameters
-	INF="${1}"
-	OUT="${2}"
+	local INF="${1}"
+	local OUT="${2}"
 
 	# What is the name of the firmware?
-	DIR="$(dirname "${INF}")"
-	FIRMWARE="$(basename "${DIR}")"
+	local DIR="$(dirname "${INF}")"
+	local FIRMWARE="$(basename "${DIR}")"
 
 	# Create a working directory
-	TEMP="$(mktemp -p . -d)"
+	local TEMP="$(mktemp -p . -d)"
 
 	# Copy over files
-	BINFILE="$(find "${DIR}" -iname '*.bin' -or -iname '*.cap' | head -n1)"
-	CATFILE="$(find "${DIR}" -iname '*.cat' | head -n1)"
-	INFFILE="$(find "${DIR}" -iname '*.inf')"
+	local BINFILE CATFILE INFFILE
+	BINFILE="$(find "${DIR}" \( -iname '*.bin' -or -iname '*.cap' \) -print -quit)"
+	CATFILE="$(find "${DIR}" -iname '*.cat' -print -quit)"
+	INFFILE="$(find "${DIR}" -iname '*.inf' -print -quit)"
 
 	if [ "$BINFILE" = "" ]; then
 		echo "==> Skipping ${INF}"
@@ -90,63 +148,67 @@ repackinf()
 	sed -i "s|$(basename "${BINFILE}")|firmware.bin|g" "${TEMP}/firmware.inf"
 	sed -i "s|$(basename "${CATFILE}")|firmware.cat|g" "${TEMP}/firmware.inf"
 
-	# Create metainfo file
-	cp template.metainfo.xml "${TEMP}/firmware.metainfo.xml"
-
 	# Update the device GUID
-	DEVICE="$(grep -m1 'Firmware_Install, *UEFI' "${TEMP}/firmware.inf")"
-	DEVICE="$(echo "${DEVICE}" | cut -d'{' -f2 | cut -d'}' -f1)"
-	DEVICE="$(echo "${DEVICE}" | tr '[:upper:]' '[:lower:]')"
-	sed -i "s|{DEVICE}|${DEVICE}|g" "${TEMP}/firmware.metainfo.xml"
+	local -l DEVICE		# -l: Values are always lowercase
+	DEVICE="$(awk -F'[{}]' '/Firmware_Install, *UEFI/{print $2}' "${TEMP}/firmware.inf")"
 
 	# Update firmware type
-	CATEGORY="X-Device"
-	if echo "${FIRMWARE}" | grep -q UEFI; then
-		CATEGORY="X-System"
-	elif echo "${FIRMWARE}" | grep -q ME; then
-		CATEGORY="X-ManagementEngine"
-	fi
-	sed -i "s|{CATEGORY}|${CATEGORY}|g" "${TEMP}/firmware.metainfo.xml"
+	local CATEGORY
+	case "$(basename "${INFFILE}")" in
+	    *UEFI*) 	CATEGORY="X-System"		;;
+	    *ME*)	CATEGORY="X-ManagementEngine"	;;
+	    *)		CATEGORY="X-Device"		;;
+	esac
 
 	# Update firmware version
-	VERSION="$(grep 'FirmwareVersion' "${TEMP}/firmware.inf" | cut -d',' -f5 | sed 's|\r||')"
-	MAJOR="$(( (VERSION >> 24) & 0xff ))"
-	MINOR="$(( (VERSION >> 16) & 0xff ))"
-	REV="$(( VERSION & 0xffff ))"
+	local VERSION
+	VERSION="$(grep FirmwareVersion "${TEMP}/firmware.inf" | cut -d, -f5)"
+	VERSION=${VERSION%$'\r'}
+	local MAJOR="$(( (VERSION >> 24) & 0xff ))"
+	local MINOR="$(( (VERSION >> 16) & 0xff ))"
+	local REV="$(( VERSION & 0xffff ))"
 	VERSION="${MAJOR}.${MINOR}.${REV}"
-	sed -i "s|{VERSION}|${VERSION}|g" "${TEMP}/firmware.metainfo.xml"
 
 	# Update firmware timestamp
-	TIMESTAMP="$(grep '^DriverVer' "${TEMP}/firmware.inf" | sed -E 's| +||g')"
-	TIMESTAMP="$(echo "${TIMESTAMP}" | cut -d'=' -f2 | cut -d',' -f1)"
+	local TIMESTAMP
+	TIMESTAMP="$(awk -F'[=,]' '/^DriverVer/{print $2}' "${TEMP}/firmware.inf")"
 	TIMESTAMP="$(date '+%s' --date "${TIMESTAMP}")"
-	sed -i "s|{TIMESTAMP}|${TIMESTAMP}|g" "${TEMP}/firmware.metainfo.xml"
+
+	# Create metainfo file from $DEVICE, $CATEGORY, $VERSION, & $TIMESTAMP
+	filltemplate "$DEVICE" "$CATEGORY" "$VERSION" "$TIMESTAMP" \
+		     > "${TEMP}/firmware.metainfo.xml"
 
 	# Create a cab file of the firmware
-	gcab -cn "${OUT}/${FIRMWARE}_${VERSION}_${DEVICE}.cab" "${TEMP}"/*
+	local cabfile="${OUT}/${FIRMWARE}_${VERSION}_${DEVICE}.cab"
+	gcab -cn "$cabfile" "${TEMP}"/*
 	rm -r "${TEMP}"
+	
+	# Remember the cab filename for later
+	CAB_ARRAY+=("$cabfile")
 }
 
 repackdir()
 {
-	DIR="${1}"
-	OUT="${2}"
+	local DIR="${1}"
+	local OUT="${2}"
 
-	# Convert all .inf files to unix format
-	find "${DIR}" -iname '*.inf' -exec sh -c 'dos2unix "$0" > /dev/null 2>&1' {} \;
+	# Convert all .inf files to UTF-8
+	find . -iname '*.inf' -execdir dos2unix --quiet {} +
 
 	# Repack all UEFI capsule updates found in the directory
-	grep -lR 'Firmware_Install,UEFI' "${DIR}" | while IFS= read -r INF; do
-		echo "==> Repacking ${INF}"
+	local inffiles=($(grep -lR 'Firmware_Install,UEFI' "${DIR}"))
 
+	local INF
+	for INF in "${inffiles[@]}"; do
+		echo "==> Repacking ${INF}"
 		repackinf "${INF}" "${OUT}"
 	done
 }
 
 repackmsi()
 {
-	MSI="${1}"
-	OUT="${2}"
+	local MSI="${1}"
+	local OUT="${2}"
 
 	echo "==> Extracting ${MSI}"
 
@@ -163,22 +225,24 @@ repackmsi()
 
 repackcab()
 {
-	CAB="${1}"
-	OUT="${2}"
+	local CAB="${1}"
+	local OUT="${2}"
 
 	echo "==> Extracting ${CAB}"
 
 	# Extract the CAB
-	TEMP="$(mktemp -p . -d)"
+	local TEMP="$(mktemp -p . -d)"
 	gcab -C "${TEMP}" -x "${CAB}" > /dev/null
 
-	# Convert all .inf files to unix format
-	find "${TEMP}" -iname '*.inf' -exec sh -c 'dos2unix "$0" > /dev/null 2>&1' {} \;
+	# Convert all .inf files to UTF-8
+	find . -iname '*.inf' -execdir dos2unix --quiet {} +
 
 	# Repack all UEF capsule updates found in the CAB
-	grep -lR 'Firmware_Install,UEFI' "${TEMP}" | while IFS= read -r INF; do
-		echo "==> Repacking ${INF}"
+	local inffiles=($(grep -lR 'Firmware_Install,UEFI' "${TEMP}"))
 
+	local INF
+	for INF in "${inffiles[@]}"; do
+		echo "==> Repacking ${INF}"
 		repackinf "${INF}" "${OUT}"
 	done
 
@@ -186,17 +250,44 @@ repackcab()
 	rm -r "${TEMP}"
 }
 
-mkdir -p "${OUTPUT}"
+filltemplate()
+{
+    # Fill in the XML template
+    local DEVICE="$1" CATEGORY="$2" VERSION="$3" TIMESTAMP="$4"
+    cat <<EOF 
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="firmware">
+	<id>com.surfacelinux.firmware.${DEVICE}</id>
+	<provides>
+		<firmware type="flashed">${DEVICE}</firmware>
+	</provides>
+	<name>Surface Firmware</name>
+	<summary>Firmware for ${DEVICE}</summary>
+	<description>
+		<p>Updating the firmware on your device improves performance and adds new features.</p>
+	</description>
+	<categories>
+		<category>${CATEGORY}</category>
+	</categories>
+	<custom>
+		<value key="LVFS::UpdateProtocol">org.uefi.capsule</value>
+	</custom>
+	<url type="homepage">https://www.microsoft.com</url>
+	<metadata_license>CC0-1.0</metadata_license>
+	<project_license>proprietary</project_license>
+	<developer_name>Microsoft</developer_name>
+	<releases>
+		<release version="${VERSION}" timestamp="${TIMESTAMP}">
+			<description>
+				<p>Please visit the Microsoft homepage to find more information about this update.</p>
+				<p>The computer will be restarted automatically after updating completely. Do NOT turn off your computer or remove the AC adaptor while update is in progress.</p>
+			</description>
+		</release>
+	</releases>
+</component>
+EOF
 
-if echo "${FILE}" | grep -Eiq "\.msi$"; then
-	repackmsi "${FILE}" "${OUTPUT}"
-elif echo "${FILE}" | grep -Eiq "\.cab$"; then
-	repackcab "${FILE}" "${OUTPUT}"
-elif echo "${FILE}" | grep -Eiq "\.inf$"; then
-	repackinf "${FILE}" "${OUTPUT}"
-elif [ -d "${FILE}" ]; then
-	repackdir "${FILE}" "${OUTPUT}"
-else
-	echo "==> Invalid file type!"
-	exit 1
-fi
+}
+
+main "$@"
+
