@@ -50,18 +50,18 @@ while true; do
 done
 
 if [ "$FILE" = "" ] && [ $# -gt 0 ]; then
-    FILE="${1}"
-    shift
+	FILE="${1}"
+	shift
 fi
 
 if [ "$#" -gt 0 ]; then
-    OUTPUT="${1}"
-    shift
+	OUTPUT="${1}"
+	shift
 fi
 
 if [ "$#" -gt 0 ]; then
-    echo "ERROR: Excess arguments: $*"
-    exit 1
+	echo "ERROR: Excess arguments: $*"
+	exit 1
 fi
 
 if [ "$FILE" = "" ]; then
@@ -76,45 +76,45 @@ if [ "$OUTPUT" = "" ]; then
 fi
 
 for c in msiextract gcab dos2unix; do
-    if ! command -v $c > /dev/null; then
-	echo "ERROR: command '$c' not found, please install the corresponding package"
-	exit 1
-    fi
+	if ! command -v $c > /dev/null; then
+		echo "ERROR: command '$c' not found, please install the corresponding package"
+		exit 1
+	fi
 done
 
 
 main()
 {
-    mkdir -p "${OUTPUT}"
+	mkdir -p "${OUTPUT}"
 
-    case "${FILE}" in
+	case "${FILE}" in
 	*.msi) repackmsi "${FILE}" "${OUTPUT}"
-	       ;;
+		   ;;
 	*.cab) repackcab "${FILE}" "${OUTPUT}"
-	       ;;
+		   ;;
 	*.inf) repackinf "${FILE}" "${OUTPUT}"
-	       ;;
+		   ;;
 	*) if [ -d "${FILE}" ]; then
-	       repackdir "${FILE}" "${OUTPUT}"
+		   repackdir "${FILE}" "${OUTPUT}"
 	   else
-	       echo "==> ${FILE}: Invalid file type!"
-	       exit 1
+		   echo "==> ${FILE}: Invalid file type!"
+		   exit 1
 	   fi
-    esac
+	esac
 
-    if [[ ${#CAB_ARRAY[@]} -gt 0 ]]; then
+	if [[ ${#CAB_ARRAY[@]} -gt 0 ]]; then
 	echo "Success!"
-	echo "If you wish, you may now install the firmware like so:"
-	echo
-	local f
-	for f in "${CAB_ARRAY[@]}"; do
-	    echo -n "  sudo fwupdmgr install --allow-older --allow-reinstall --no-reboot-check --force "
-	    echo "'$f'"
-	done
-    else
-	echo "No firmware found in '${FILE}'"
-    fi	
-}    
+		echo "If you wish, you may now install the firmware like so:"
+		echo
+		local f
+		for f in "${CAB_ARRAY[@]}"; do
+			echo -n "  sudo fwupdmgr install --allow-older --allow-reinstall --no-reboot-check --force "
+			echo "'$f'"
+		done
+	else
+		echo "No firmware found in '${FILE}'"
+	fi
+}
 
 
 repackinf()
@@ -156,9 +156,9 @@ repackinf()
 	# Update firmware type
 	local CATEGORY
 	case "$(basename "${INFFILE}")" in
-	    *UEFI*) 	CATEGORY="X-System"		;;
-	    *ME*)	CATEGORY="X-ManagementEngine"	;;
-	    *)		CATEGORY="X-Device"		;;
+		*UEFI*) CATEGORY="X-System" ;;
+		*ME*)   CATEGORY="X-ManagementEngine" ;;
+		*)      CATEGORY="X-Device" ;;
 	esac
 
 	# Update firmware version
@@ -177,13 +177,13 @@ repackinf()
 
 	# Create metainfo file from $DEVICE, $CATEGORY, $VERSION, & $TIMESTAMP
 	filltemplate "$DEVICE" "$CATEGORY" "$VERSION" "$TIMESTAMP" \
-		     > "${TEMP}/firmware.metainfo.xml"
+			> "${TEMP}/firmware.metainfo.xml"
 
 	# Create a cab file of the firmware
 	local cabfile="${OUT}/${FIRMWARE}_${VERSION}_${DEVICE}.cab"
 	gcab -cn "$cabfile" "${TEMP}"/*
 	rm -r "${TEMP}"
-	
+
 	# Remember the cab filename for later
 	CAB_ARRAY+=("$cabfile")
 }
@@ -244,9 +244,10 @@ repackcab()
 
 filltemplate()
 {
-    # Fill in the XML template
-    local DEVICE="$1" CATEGORY="$2" VERSION="$3" TIMESTAMP="$4"
-    cat <<EOF 
+	# Fill in the XML template
+	local DEVICE="$1" CATEGORY="$2" VERSION="$3" TIMESTAMP="$4"
+
+	cat <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="firmware">
 	<id>com.surfacelinux.firmware.${DEVICE}</id>
