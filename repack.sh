@@ -234,17 +234,8 @@ repackcab()
 	local TEMP="$(mktemp -p . -d)"
 	gcab -C "${TEMP}" -x "${CAB}" > /dev/null
 
-	# Convert all .inf files to UTF-8
-	find . -iname '*.inf' -execdir dos2unix --quiet {} +
-
-	# Repack all UEF capsule updates found in the CAB
-	local inffiles=($(grep -lR 'Firmware_Install,UEFI' "${TEMP}"))
-
-	local INF
-	for INF in "${inffiles[@]}"; do
-		echo "==> Repacking ${INF}"
-		repackinf "${INF}" "${OUT}"
-	done
+	# Repack all .inf files in the extracted CAB
+	repackdir "${TEMP}" "${OUT}"
 
 	# Clean up
 	rm -r "${TEMP}"
