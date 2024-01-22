@@ -193,7 +193,7 @@ repackdir()
 	local OUT="${2}"
 
 	# Convert all .inf files to UTF-8
-	find . -iname '*.inf' -execdir dos2unix --quiet {} \;
+	find "${DIR}" -iname '*.inf' -execdir dos2unix --quiet {} \;
 
 	# Repack all UEFI capsule updates found in the directory
 	local inffiles=($(grep -lR 'Firmware_Install,UEFI' "${DIR}"))
