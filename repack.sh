@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eEuo pipefail
+trap 'echo "ERROR: Repacking failed"' ERR
 
 # GLOBALS
 declare -g FILE=""
