@@ -151,7 +151,7 @@ repackinf()
 
 	# Update the device GUID
 	local -l DEVICE		# -l: Values are always lowercase
-	DEVICE="$(awk -F'[{}]' '/Firmware_Install, *UEFI/{print $2}' "${TEMP}/firmware.inf")"
+	DEVICE="$(awk -F'[{}]' '/Firmware_Install, *UEFI/{print $2; exit}' "${TEMP}/firmware.inf")"
 
 	# Update firmware type
 	local CATEGORY
